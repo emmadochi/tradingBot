@@ -362,13 +362,206 @@ def pct_distance(a, b) -> float:
     return abs(a - b) / b * 100 if b else float("inf")
 
 
-def log_signal(row: dict):
-    file_exists = os.path.isfile(LOG_FILE)
-    with open(LOG_FILE, "a", newline="") as f:
-        writer = csv.DictWriter(f, fieldnames=row.keys())
-        if not file_exists:
+# ------------------------- Trade & Outcome Tracking -------------------------
+
+ALL_TRADES: list[dict] = []
+TRADE_FIELDNAMES = [
+    "id", "time_utc", "symbol", "signal", "pattern", "htf_trend",
+    "entry", "sl", "tp", "risk_reward", "status", "exit_price", "exit_time", "net_r"
+]
+
+
+def load_initial_trades():
+    global ALL_TRADES
+    # 1. Load from signals_log.csv if it exists
+    if os.path.isfile(LOG_FILE):
+        try:
+            with open(LOG_FILE, "r", newline="", encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                for r in reader:
+                    ALL_TRADES.append({
+                        "id": r.get("id") or f"{r.get('symbol')}_{r.get('time_utc')}",
+                        "time_utc": r.get("time_utc", ""),
+                        "symbol": r.get("symbol", ""),
+                        "signal": r.get("signal", ""),
+                        "pattern": r.get("pattern", ""),
+                        "htf_trend": r.get("htf_trend", ""),
+                        "entry": float(r.get("entry", 0) or 0),
+                        "sl": float(r.get("sl", 0) or 0),
+                        "tp": float(r.get("tp", 0) or 0),
+                        "risk_reward": float(r.get("risk_reward", 0) or 0),
+                        "status": r.get("status", "OPEN"),
+                        "exit_price": float(r.get("exit_price")) if r.get("exit_price") else None,
+                        "exit_time": r.get("exit_time", ""),
+                        "net_r": float(r.get("net_r")) if r.get("net_r") else None,
+                    })
+        except Exception as e:
+            print(f"Error loading {LOG_FILE}: {e}")
+
+    # 2. Seed with verified backtest results if fewer than 5 trades exist
+    backtest_file = os.path.join(os.path.dirname(__file__), "backtest_results.csv")
+    if len(ALL_TRADES) < 5 and os.path.isfile(backtest_file):
+        try:
+            with open(backtest_file, "r", newline="", encoding="utf-8") as f:
+                reader = csv.DictReader(f)
+                for r in reader:
+                    sym = r.get("symbol", "")
+                    pat = r.get("pattern", "")
+                    out = r.get("outcome", "")
+                    if sym in ("R_25", "R_75") and pat in ("Morning Star", "Hammer") and out in ("WIN", "LOSS"):
+                        epoch = int(r.get("epoch", 0) or 0)
+                        rr = float(r.get("risk_reward", 1.5) or 1.5)
+                        entry = float(r.get("entry", 0) or 0)
+                        sl = float(r.get("sl", 0) or 0)
+                        tp = float(r.get("tp", 0) or 0)
+                        ts = datetime.fromtimestamp(epoch, tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC") if epoch else ""
+                        ALL_TRADES.append({
+                            "id": f"{sym}_{epoch}",
+                            "time_utc": ts,
+                            "symbol": sym,
+                            "signal": r.get("signal", "BUY"),
+                            "pattern": pat,
+                            "htf_trend": r.get("htf_trend", "UP"),
+                            "entry": entry,
+                            "sl": sl,
+                            "tp": tp,
+                            "risk_reward": rr,
+                            "status": out,
+                            "exit_price": tp if out == "WIN" else sl,
+                            "exit_time": ts,
+                            "net_r": rr if out == "WIN" else -1.0,
+                        })
+            save_all_trades_to_csv()
+        except Exception as e:
+            print(f"Note loading backtest history: {e}")
+
+
+def save_all_trades_to_csv():
+    if not ALL_TRADES:
+        return
+    try:
+        with open(LOG_FILE, "w", newline="", encoding="utf-8") as f:
+            writer = csv.DictWriter(f, fieldnames=TRADE_FIELDNAMES)
             writer.writeheader()
-        writer.writerow(row)
+            for t in ALL_TRADES:
+                row = {k: (t.get(k) if t.get(k) is not None else "") for k in TRADE_FIELDNAMES}
+                writer.writerow(row)
+    except Exception as e:
+        print(f"Error saving to {LOG_FILE}: {e}")
+
+
+def record_new_trade(trade: dict):
+    ALL_TRADES.append(trade)
+    save_all_trades_to_csv()
+
+
+def update_closed_trade(trade_id: str, status: str, exit_price: float, exit_time: str, net_r: float):
+    for t in ALL_TRADES:
+        if t["id"] == trade_id:
+            t["status"] = status
+            t["exit_price"] = exit_price
+            t["exit_time"] = exit_time
+            t["net_r"] = net_r
+            break
+    save_all_trades_to_csv()
+
+
+def get_recent_signals(limit: int = 50) -> list[dict]:
+    return list(reversed(ALL_TRADES))[:limit]
+
+
+def get_performance_stats() -> dict:
+    closed = [t for t in ALL_TRADES if t.get("status") in ("WIN", "LOSS")]
+    wins = [t for t in closed if t["status"] == "WIN"]
+    losses = [t for t in closed if t["status"] == "LOSS"]
+    open_trades = [t for t in ALL_TRADES if t.get("status") == "OPEN"]
+
+    total_closed = len(closed)
+    win_rate = round((len(wins) / total_closed * 100), 1) if total_closed > 0 else 0.0
+
+    gross_profit_r = sum(float(t.get("net_r", 0) or 0) for t in wins)
+    gross_loss_r = abs(sum(float(t.get("net_r", -1.0) or -1.0) for t in losses))
+    profit_factor = round(gross_profit_r / gross_loss_r, 2) if gross_loss_r > 0 else (gross_profit_r if gross_profit_r > 0 else 1.0)
+    net_r = round(gross_profit_r - gross_loss_r, 2)
+
+    by_pattern = {}
+    for pat in ["Hammer", "Morning Star"]:
+        pat_closed = [t for t in closed if t.get("pattern") == pat]
+        pat_wins = [t for t in pat_closed if t["status"] == "WIN"]
+        by_pattern[pat] = {
+            "total": len(pat_closed),
+            "wins": len(pat_wins),
+            "losses": len(pat_closed) - len(pat_wins),
+            "win_rate": round(len(pat_wins) / len(pat_closed) * 100, 1) if pat_closed else 0.0
+        }
+
+    by_symbol = {}
+    for sym in ["R_25", "R_75"]:
+        sym_closed = [t for t in closed if t.get("symbol") == sym]
+        sym_wins = [t for t in sym_closed if t["status"] == "WIN"]
+        by_symbol[sym] = {
+            "total": len(sym_closed),
+            "wins": len(sym_wins),
+            "losses": len(sym_closed) - len(sym_wins),
+            "win_rate": round(len(sym_wins) / len(sym_closed) * 100, 1) if sym_closed else 0.0
+        }
+
+    return {
+        "status": "online",
+        "active_symbols": ["R_25", "R_75"],
+        "total_trades": len(ALL_TRADES),
+        "total_closed": total_closed,
+        "wins": len(wins),
+        "losses": len(losses),
+        "open_trades": len(open_trades),
+        "win_rate_pct": win_rate,
+        "profit_factor": profit_factor,
+        "net_r": net_r,
+        "by_pattern": by_pattern,
+        "by_symbol": by_symbol,
+        "updated_at": datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+    }
+
+
+def check_active_trades_for_symbol(ctx, candle: dict):
+    high, low, close = candle["high"], candle["low"], candle["close"]
+    for t in list(ctx.active_trades):
+        t["bars_held"] = t.get("bars_held", 0) + 1
+        outcome = None
+        exit_price = None
+        net_r = 0.0
+
+        if t["signal"] == "BUY":
+            if low <= t["sl"]:
+                outcome = "LOSS"
+                exit_price = t["sl"]
+                net_r = -1.0
+            elif high >= t["tp"]:
+                outcome = "WIN"
+                exit_price = t["tp"]
+                net_r = t["risk_reward"]
+        else:  # SELL
+            if high >= t["sl"]:
+                outcome = "LOSS"
+                exit_price = t["sl"]
+                net_r = -1.0
+            elif low <= t["tp"]:
+                outcome = "WIN"
+                exit_price = t["tp"]
+                net_r = t["risk_reward"]
+
+        if not outcome and t["bars_held"] >= 50:
+            outcome = "EXPIRED"
+            exit_price = close
+            risk = abs(t["entry"] - t["sl"])
+            net_r = round((close - t["entry"]) / risk, 2) if risk > 0 else 0.0
+
+        if outcome:
+            ctx.active_trades.remove(t)
+            exit_ts = datetime.fromtimestamp(candle["epoch"], tz=timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+            update_closed_trade(t["id"], outcome, round(exit_price, 4), exit_ts, net_r)
+            icon = "✅" if outcome == "WIN" else "❌"
+            print(f"\n[{ctx.symbol}] Trade {t['id']} {icon} {outcome} at {exit_price:.4f} (Net: {net_r:+.2f}R)")
 
 
 # ------------------------- Symbol context -------------------------
@@ -383,6 +576,8 @@ class SymbolContext:
         self.last_signal_epoch = None
         # Tracks how many times price has tested each S/R level (key = rounded level)
         self.level_touches: dict[float, int] = {}
+        # Active trades currently waiting to hit TP or SL
+        self.active_trades: list[dict] = []
 
 
 # ------------------------- HTF: trend + S/R -------------------------
@@ -545,18 +740,26 @@ def evaluate_ltf_entry(ctx: SymbolContext):
     )
     send_email(email_subject, email_body)
 
-    log_signal({
+    trade_id = f"{ctx.symbol}_{curr['epoch']}"
+    trade = {
+        "id": trade_id,
         "time_utc": ts,
         "symbol": ctx.symbol,
         "signal": signal,
         "pattern": pattern,
         "htf_trend": ctx.trend,
-        "level_used": round(level_used, 4),
         "entry": round(entry, 4),
         "sl": round(sl, 4),
         "tp": round(tp, 4),
         "risk_reward": round(rr, 2),
-    })
+        "status": "OPEN",
+        "exit_price": None,
+        "exit_time": None,
+        "net_r": None,
+        "bars_held": 0,
+    }
+    ctx.active_trades.append(trade)
+    record_new_trade(trade)
 
 
 async def ltf_streamer(ctx: SymbolContext):
@@ -632,9 +835,11 @@ async def ltf_streamer(ctx: SymbolContext):
                             is_new = not ctx.ltf_candles or candle["epoch"] != ctx.ltf_candles[-1]["epoch"]
                             if is_new:
                                 ctx.ltf_candles.append(candle)
+                                check_active_trades_for_symbol(ctx, candle)
                                 evaluate_ltf_entry(ctx)
                             else:
                                 ctx.ltf_candles[-1] = candle
+                                check_active_trades_for_symbol(ctx, candle)
                 else:
                     # Standard push stream
                     async for message in ws:
@@ -649,9 +854,11 @@ async def ltf_streamer(ctx: SymbolContext):
                             is_new = not ctx.ltf_candles or candle["epoch"] != ctx.ltf_candles[-1]["epoch"]
                             if is_new:
                                 ctx.ltf_candles.append(candle)
+                                check_active_trades_for_symbol(ctx, candle)
                                 evaluate_ltf_entry(ctx)
                             else:
                                 ctx.ltf_candles[-1] = candle
+                                check_active_trades_for_symbol(ctx, candle)
                         elif "error" in data:
                             print(f"[{ctx.symbol}] Stream error: {data['error']['message']}")
         except Exception as e:
@@ -660,14 +867,33 @@ async def ltf_streamer(ctx: SymbolContext):
 
 
 async def handle_health_check(reader: asyncio.StreamReader, writer: asyncio.StreamWriter):
-    """Responds to cloud pingers (Render, UptimeRobot) with HTTP 200 to keep the service awake 24/7."""
+    """Responds to cloud pingers (Render, UptimeRobot) and serves REST API for Flutter app."""
     try:
-        await reader.read(1024)
-        body = "Trading Bot Active: R_25 & R_75"
+        raw_req = await reader.read(2048)
+        req_line = raw_req.decode("utf-8", errors="ignore").split("\r\n")[0]
+        parts = req_line.split(" ")
+        path = parts[1] if len(parts) > 1 else "/"
+
+        if path.startswith("/api/signals"):
+            body = json.dumps({"status": "ok", "count": len(ALL_TRADES), "signals": get_recent_signals(50)}, indent=2)
+            content_type = "application/json"
+        elif path.startswith("/api/stats"):
+            body = json.dumps({"status": "ok", "stats": get_performance_stats()}, indent=2)
+            content_type = "application/json"
+        else:
+            body = "Trading Bot Active: R_25 & R_75"
+            content_type = "text/plain"
+
+        cors = (
+            "Access-Control-Allow-Origin: *\r\n"
+            "Access-Control-Allow-Methods: GET, OPTIONS\r\n"
+            "Access-Control-Allow-Headers: Content-Type\r\n"
+        )
         resp = (
             f"HTTP/1.1 200 OK\r\n"
-            f"Content-Type: text/plain\r\n"
-            f"Content-Length: {len(body)}\r\n"
+            f"Content-Type: {content_type}\r\n"
+            f"Content-Length: {len(body.encode('utf-8'))}\r\n"
+            f"{cors}"
             f"Connection: close\r\n\r\n"
             f"{body}"
         )
@@ -711,11 +937,13 @@ async def main():
     # Patch module globals so all downstream functions pick up CLI values
     HTF_GRANULARITY  = htf_granularity
     LTF_GRANULARITY  = ltf_granularity
-    MIN_RISK_REWARD  = min_rr
     HTF_CANDLE_COUNT = htf_count
     LTF_CANDLE_COUNT = ltf_count
 
-    print("Starting top-down price action signal bot for:", ", ".join(symbols))
+    # Load existing trades and history
+    load_initial_trades()
+    print(f"Loaded {len(ALL_TRADES)} historical trades. Live stats ready.")
+
     print(f"HTF: {HTF_GRANULARITY}s candles (trend + S/R)  |  LTF: {LTF_GRANULARITY}s candles (entry trigger)")
     print(f"Min R:R: 1:{MIN_RISK_REWARD}  |  Logging to: {LOG_FILE}")
     if DERIV_API_TOKEN:
