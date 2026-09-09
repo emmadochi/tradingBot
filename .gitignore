@@ -1,0 +1,17 @@
+# Environment variables with private credentials
+.env
+
+# Python cache & artifacts
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Log and results data
+signals_log.csv
+backtest_results.csv
+
+# Virtual environments
+venv/
+.venv/
+env/
