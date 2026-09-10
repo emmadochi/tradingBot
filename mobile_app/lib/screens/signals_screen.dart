@@ -73,7 +73,7 @@ class _SignalsScreenState extends State<SignalsScreen> {
                   ),
                 )
               : ListView(
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
                   children: [
                     // Header Bar
                     Row(
@@ -293,15 +293,19 @@ class _SignalsScreenState extends State<SignalsScreen> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
-                          const Text(
-                            'BENCHMARK HISTORICAL SAMPLES',
-                            style: TextStyle(
-                              color: AppTheme.textMuted,
-                              fontSize: 11,
-                              fontWeight: FontWeight.w700,
-                              letterSpacing: 0.8,
+                          const Expanded(
+                            child: Text(
+                              'HISTORICAL BENCHMARK',
+                              style: TextStyle(
+                                color: AppTheme.textMuted,
+                                fontSize: 11,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 0.8,
+                              ),
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
+                          const SizedBox(width: 8),
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                             decoration: BoxDecoration(
@@ -309,7 +313,7 @@ class _SignalsScreenState extends State<SignalsScreen> {
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: const Text(
-                              'For UI Reference Only',
+                              'Demo Reference',
                               style: TextStyle(
                                 color: AppTheme.textMuted,
                                 fontSize: 10,

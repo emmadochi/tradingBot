@@ -38,7 +38,7 @@ class SignalCard extends StatelessWidget {
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
-      padding: const EdgeInsets.all(16),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
       decoration: BoxDecoration(
         color: AppTheme.surface,
         borderRadius: BorderRadius.circular(16),
@@ -52,12 +52,12 @@ class SignalCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Header Row
+          // Header Row: Clean, balanced, and responsive
           Row(
             children: [
               // Symbol badge
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: AppTheme.surfaceLight,
                   borderRadius: BorderRadius.circular(8),
@@ -67,17 +67,17 @@ class SignalCard extends StatelessWidget {
                   signal.symbol,
                   style: const TextStyle(
                     color: AppTheme.textPrimary,
-                    fontSize: 13,
+                    fontSize: 12,
                     fontWeight: FontWeight.w700,
                     letterSpacing: 0.5,
                   ),
                 ),
               ),
-              const SizedBox(width: 8),
+              const SizedBox(width: 6),
 
               // Direction Pill
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
                 decoration: BoxDecoration(
                   color: dirColor.withValues(alpha: 0.12),
                   borderRadius: BorderRadius.circular(8),
@@ -87,15 +87,15 @@ class SignalCard extends StatelessWidget {
                   children: [
                     Icon(
                       isBuy ? Icons.arrow_upward_rounded : Icons.arrow_downward_rounded,
-                      size: 13,
+                      size: 12,
                       color: dirColor,
                     ),
-                    const SizedBox(width: 3),
+                    const SizedBox(width: 2),
                     Text(
                       signal.direction,
                       style: TextStyle(
                         color: dirColor,
-                        fontSize: 12,
+                        fontSize: 11,
                         fontWeight: FontWeight.w700,
                       ),
                     ),
@@ -104,43 +104,24 @@ class SignalCard extends StatelessWidget {
               ),
               const SizedBox(width: 8),
 
-              // Pattern Tag
-              Text(
-                signal.pattern,
-                style: const TextStyle(
-                  color: AppTheme.textSecondary,
-                  fontSize: 12,
-                  fontWeight: FontWeight.w500,
+              // Pattern Name (Flexible so it never pushes the status off screen)
+              Expanded(
+                child: Text(
+                  signal.pattern,
+                  style: const TextStyle(
+                    color: AppTheme.textSecondary,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                  ),
+                  overflow: TextOverflow.ellipsis,
+                  maxLines: 1,
                 ),
               ),
+              const SizedBox(width: 6),
 
-              const Spacer(),
-
-              // Live vs Benchmark tag
-              if (!signal.isLive) ...[
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: AppTheme.surfaceLight,
-                    borderRadius: BorderRadius.circular(6),
-                    border: Border.all(color: AppTheme.borderLight, width: 0.7),
-                  ),
-                  child: const Text(
-                    'BENCHMARK',
-                    style: TextStyle(
-                      color: AppTheme.textMuted,
-                      fontSize: 9,
-                      fontWeight: FontWeight.w700,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 6),
-              ],
-
-              // Status Pill
+              // Status Pill (Always fits neatly on the right)
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: statusBg,
                   borderRadius: BorderRadius.circular(8),
@@ -162,43 +143,68 @@ class SignalCard extends StatelessWidget {
             ],
           ),
 
-          const SizedBox(height: 14),
+          const SizedBox(height: 12),
 
-          // Price Metrics Grid
+          // Price Metrics Grid: 4 equal-width responsive columns
           Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
             decoration: BoxDecoration(
               color: AppTheme.surfaceLight.withValues(alpha: 0.5),
               borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                _buildPriceColumn('ENTRY', _formatPrice(signal.entry), AppTheme.textPrimary),
-                _buildPriceColumn('STOP LOSS', _formatPrice(signal.sl), AppTheme.error),
-                _buildPriceColumn('TAKE PROFIT', _formatPrice(signal.tp), AppTheme.success),
-                _buildPriceColumn('R:R', '1 : ${signal.rr.toStringAsFixed(1)}', AppTheme.primary),
+                Expanded(child: _buildPriceColumn('ENTRY', _formatPrice(signal.entry), AppTheme.textPrimary)),
+                Expanded(child: _buildPriceColumn('STOP LOSS', _formatPrice(signal.sl), AppTheme.error)),
+                Expanded(child: _buildPriceColumn('TAKE PROFIT', _formatPrice(signal.tp), AppTheme.success)),
+                Expanded(child: _buildPriceColumn('R:R', '1:${signal.rr.toStringAsFixed(1)}', AppTheme.primary)),
               ],
             ),
           ),
 
           const SizedBox(height: 12),
 
-          // Footer Row with Calculate Lot Button
+          // Footer Row: Timestamp + Demo Tag (Left) & Calculate Lot Button (Right)
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              Text(
-                signal.timestamp,
-                style: const TextStyle(
-                  color: AppTheme.textMuted,
-                  fontSize: 11,
-                ),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    signal.timestamp.replaceAll(' UTC', ''),
+                    style: const TextStyle(
+                      color: AppTheme.textMuted,
+                      fontSize: 11,
+                    ),
+                  ),
+                  if (!signal.isLive) ...[
+                    const SizedBox(width: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 2),
+                      decoration: BoxDecoration(
+                        color: AppTheme.surfaceLight,
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: AppTheme.borderLight, width: 0.6),
+                      ),
+                      child: const Text(
+                        'DEMO',
+                        style: TextStyle(
+                          color: AppTheme.textMuted,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w700,
+                          letterSpacing: 0.4,
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
               ),
               GestureDetector(
                 onTap: () => LotCalculatorSheet.show(context, signal),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
                   decoration: BoxDecoration(
                     color: AppTheme.primary.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(8),
@@ -210,7 +216,7 @@ class SignalCard extends StatelessWidget {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: const [
-                      Icon(Icons.calculate_rounded, size: 13, color: AppTheme.primary),
+                      Icon(Icons.calculate_rounded, size: 12, color: AppTheme.primary),
                       SizedBox(width: 4),
                       Text(
                         'Calculate Lot',
@@ -239,18 +245,22 @@ class SignalCard extends StatelessWidget {
           label,
           style: const TextStyle(
             color: AppTheme.textMuted,
-            fontSize: 10,
+            fontSize: 9,
             fontWeight: FontWeight.w600,
-            letterSpacing: 0.5,
+            letterSpacing: 0.4,
           ),
         ),
         const SizedBox(height: 3),
-        Text(
-          value,
-          style: TextStyle(
-            color: valueColor,
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
+        FittedBox(
+          fit: BoxFit.scaleDown,
+          alignment: Alignment.centerLeft,
+          child: Text(
+            value,
+            style: TextStyle(
+              color: valueColor,
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            ),
           ),
         ),
       ],
