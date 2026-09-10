@@ -49,6 +49,7 @@ from signal_bot import (
     SIGNAL_MIN_BODY_RATIO,
     SR_MAX_LEVEL_TOUCHES,
     ENABLED_PATTERNS,
+    SYMBOL_PATTERNS,
     SWING_LOOKBACK,
     WS_URL,
     atr,
@@ -120,7 +121,7 @@ def simulate_outcome(signal: str, entry: float, sl: float, tp: float,
 
 # -- Core backtest logic -------------------------------------------------------
 
-def run_backtest(htf_df: pd.DataFrame, ltf_df: pd.DataFrame) -> list:
+def run_backtest(htf_df: pd.DataFrame, ltf_df: pd.DataFrame, symbol: str = "") -> list:
     """
     Replay LTF candles chronologically. At each bar:
       1. Use HTF candles up to that point for trend + S/R.
@@ -155,9 +156,10 @@ def run_backtest(htf_df: pd.DataFrame, ltf_df: pd.DataFrame) -> list:
         ltf_slice = ltf_df.iloc[max(0, i - LTF_CANDLE_COUNT): i + 1].copy()
         curr      = ltf_slice.iloc[-1]
 
-        # Filter 1: Only enabled high-winrate patterns
+        # Filter 1: Only enabled high-winrate patterns (using asset-specific profile)
+        allowed_patterns = SYMBOL_PATTERNS.get(symbol, ENABLED_PATTERNS)
         pattern, direction = detect_pattern(ltf_slice.tail(3))
-        if not direction or pattern not in ENABLED_PATTERNS:
+        if not direction or pattern not in allowed_patterns:
             continue
 
         # Filter 2: No RANGE trend — only trade clear UP or DOWN
@@ -367,7 +369,7 @@ async def async_main():
     print(f"  LTF candles received : {len(ltf_df)}")
     print("Running backtest ...")
 
-    trades = run_backtest(htf_df, ltf_df)
+    trades = run_backtest(htf_df, ltf_df, args.symbol)
     print_report(args.symbol, trades)
     save_results(args.symbol, trades)
 

@@ -119,6 +119,14 @@ ENABLED_PATTERNS = [
     "Shooting Star",  # SELL only — clean rejection off key resistance
 ]
 
+# Asset-specific optimal profiles targeting 65%+ win rates:
+# - R_25: Bullish specialist (Morning Star 100%, Hammer 66.7% -> combined 83.3% win rate)
+# - R_75: Bearish specialist (Shooting Star 66.7% win rate, Morning Star 50% -> PF 1.50+)
+SYMBOL_PATTERNS = {
+    "R_25": ["Morning Star", "Hammer"],
+    "R_75": ["Shooting Star", "Morning Star"],
+}
+
 # Signal candle body must be at least this fraction of its full high-low range.
 # Filters out weak/doji-like candles (e.g. 0.40 = body > 40% of range)
 SIGNAL_MIN_BODY_RATIO = 0.40
@@ -639,9 +647,10 @@ def evaluate_ltf_entry(ctx: SymbolContext):
     df["atr"] = atr(df, ATR_PERIOD)
     curr = df.iloc[-1]
 
-    # Filter 1: Only enabled high-winrate patterns
+    # Filter 1: Only enabled high-winrate patterns (using asset-specific profile)
+    allowed_patterns = SYMBOL_PATTERNS.get(ctx.symbol, ENABLED_PATTERNS)
     pattern, direction = detect_pattern(df.tail(3))
-    if not direction or pattern not in ENABLED_PATTERNS:
+    if not direction or pattern not in allowed_patterns:
         return
 
     # Filter 2: No RANGE trend — only trade clear UP or DOWN
