@@ -12,6 +12,7 @@ class TradeSignal {
   final double resultR;
   final double? exitPrice;
   final String? exitTime;
+  final bool isLive;
 
   TradeSignal({
     required this.id,
@@ -27,9 +28,10 @@ class TradeSignal {
     required this.resultR,
     this.exitPrice,
     this.exitTime,
+    this.isLive = true,
   });
 
-  factory TradeSignal.fromJson(Map<String, dynamic> json) {
+  factory TradeSignal.fromJson(Map<String, dynamic> json, {bool isLive = true}) {
     return TradeSignal(
       id: json['id']?.toString() ?? '',
       symbol: json['symbol']?.toString() ?? 'R_25',
@@ -44,6 +46,7 @@ class TradeSignal {
       resultR: (json['result_r'] as num?)?.toDouble() ?? 0.0,
       exitPrice: (json['exit_price'] as num?)?.toDouble(),
       exitTime: json['exit_time']?.toString(),
+      isLive: isLive,
     );
   }
 

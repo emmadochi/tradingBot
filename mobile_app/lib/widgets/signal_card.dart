@@ -115,6 +115,28 @@ class SignalCard extends StatelessWidget {
 
               const Spacer(),
 
+              // Live vs Benchmark tag
+              if (!signal.isLive) ...[
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: AppTheme.surfaceLight,
+                    borderRadius: BorderRadius.circular(6),
+                    border: Border.all(color: AppTheme.borderLight, width: 0.7),
+                  ),
+                  child: const Text(
+                    'BENCHMARK',
+                    style: TextStyle(
+                      color: AppTheme.textMuted,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w700,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 6),
+              ],
+
               // Status Pill
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
