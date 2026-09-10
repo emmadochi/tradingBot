@@ -1,17 +1,30 @@
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/trade_signal.dart';
 import '../theme/app_theme.dart';
 
 class NotificationService {
+  static final AudioPlayer _player = AudioPlayer();
   static final Set<String> _seenSignalIds = {};
+
+  /// Plays the loud, crisp trading chime through the device speakers
+  static Future<void> playAlertSound() async {
+    try {
+      await _player.stop();
+      await _player.play(AssetSource('audio/alert.wav'), volume: 1.0);
+    } catch (e) {
+      debugPrint('Audio error: $e');
+      SystemSound.play(SystemSoundType.alert);
+    }
+  }
 
   /// Check new signals, and trigger sound & haptic notification for any new ones
   static void checkForNewSignals(BuildContext context, List<TradeSignal> signals) {
     for (final s in signals) {
       if (!_seenSignalIds.contains(s.id)) {
         _seenSignalIds.add(s.id);
-        
+
         // Only ring sound/vibration for live signals (not historical backtest demo)
         if (s.isLive) {
           triggerAlert(context, s);
@@ -20,17 +33,16 @@ class NotificationService {
     }
   }
 
-  /// Triggers audible alert, haptic feedback, and in-app banner
-  static void triggerAlert(BuildContext context, TradeSignal signal) {
+  /// Triggers audible chime, heavy haptic vibration, and in-app banner
+  static Future<void> triggerAlert(BuildContext context, TradeSignal signal) async {
     try {
-      // 1. Play native trading chime alert
-      SystemSound.play(SystemSoundType.alert);
+      // 1. Play crisp audio chime asset through speaker at 100% volume
+      await playAlertSound();
 
-      // 2. Heavy haptic vibration pulse
-      HapticFeedback.heavyImpact();
-      Future.delayed(const Duration(milliseconds: 250), () {
-        HapticFeedback.heavyImpact();
-      });
+      // 2. Heavy dual-pulse haptic vibration
+      await HapticFeedback.heavyImpact();
+      await Future.delayed(const Duration(milliseconds: 200));
+      await HapticFeedback.heavyImpact();
     } catch (_) {}
 
     // 3. Show high-priority in-app alert banner

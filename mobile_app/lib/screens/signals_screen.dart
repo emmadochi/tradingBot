@@ -122,7 +122,7 @@ class _SignalsScreenState extends State<SignalsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: const [
                                 Text(
-                                  'DERIV EDGE RADAR • v1.0.3',
+                                  'DERIV EDGE RADAR • v1.0.4',
                                   style: TextStyle(
                                     color: AppTheme.primary,
                                     fontSize: 10,
