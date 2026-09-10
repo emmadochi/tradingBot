@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models/trade_signal.dart';
 import '../services/api_service.dart';
+import '../services/notification_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/pulse_badge.dart';
 import '../widgets/signal_card.dart';
@@ -43,6 +44,7 @@ class _SignalsScreenState extends State<SignalsScreen> {
     final live = await ApiService.fetchLiveSignals();
 
     if (mounted) {
+      NotificationService.checkForNewSignals(context, live);
       setState(() {
         _isOnline = online;
         _liveSignals = live;

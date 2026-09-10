@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models/trade_signal.dart';
 import '../theme/app_theme.dart';
+import 'lot_calculator_sheet.dart';
 
 class SignalCard extends StatelessWidget {
   final TradeSignal signal;
@@ -181,9 +182,9 @@ class SignalCard extends StatelessWidget {
             ),
           ),
 
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
 
-          // Footer Row
+          // Footer Row with Calculate Lot Button
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -194,15 +195,35 @@ class SignalCard extends StatelessWidget {
                   fontSize: 11,
                 ),
               ),
-              if (signal.exitPrice != null)
-                Text(
-                  'Closed @ ${_formatPrice(signal.exitPrice!)}',
-                  style: const TextStyle(
-                    color: AppTheme.textSecondary,
-                    fontSize: 11,
-                    fontWeight: FontWeight.w500,
+              GestureDetector(
+                onTap: () => LotCalculatorSheet.show(context, signal),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                  decoration: BoxDecoration(
+                    color: AppTheme.primary.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(
+                      color: AppTheme.primary.withValues(alpha: 0.25),
+                      width: 0.8,
+                    ),
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: const [
+                      Icon(Icons.calculate_rounded, size: 13, color: AppTheme.primary),
+                      SizedBox(width: 4),
+                      Text(
+                        'Calculate Lot',
+                        style: TextStyle(
+                          color: AppTheme.primary,
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
+              ),
             ],
           ),
         ],
