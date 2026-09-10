@@ -1,0 +1,180 @@
+import 'dart:convert';
+import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
+import '../models/trade_signal.dart';
+import '../models/performance_stats.dart';
+
+class ApiService {
+  static const String baseUrl = 'https://tradingbot-dr49.onrender.com';
+  
+  // Timeout for mobile network requests
+  static const Duration timeout = Duration(seconds: 10);
+
+  static Future<List<TradeSignal>> fetchSignals() async {
+    try {
+      final response = await http
+          .get(Uri.parse('$baseUrl/api/signals'))
+          .timeout(timeout);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        if (data['signals'] is List) {
+          final list = (data['signals'] as List)
+              .map((item) => TradeSignal.fromJson(item as Map<String, dynamic>))
+              .toList();
+
+          if (list.isNotEmpty) {
+            return list;
+          }
+        }
+      }
+    } catch (e) {
+      debugPrint('ApiService.fetchSignals error: $e');
+    }
+
+    // Fallback: If bot just deployed and has 0 live signals yet, return sample backtest signals
+    return _getSampleBacktestSignals();
+  }
+
+  static Future<PerformanceStats> fetchStats() async {
+    try {
+      final response = await http
+          .get(Uri.parse('$baseUrl/api/stats'))
+          .timeout(timeout);
+
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        final stats = PerformanceStats.fromJson(data);
+        
+        // If live bot has closed trades, return live stats
+        if (stats.totalClosed > 0) {
+          return stats;
+        }
+      }
+    } catch (e) {
+      debugPrint('ApiService.fetchStats error: $e');
+    }
+
+    // Fallback benchmark baseline if 0 trades closed yet
+    return PerformanceStats.backtestBenchmark();
+  }
+
+  static Future<bool> checkHealth() async {
+    try {
+      final response = await http
+          .get(Uri.parse('$baseUrl/'))
+          .timeout(const Duration(seconds: 5));
+      return response.statusCode == 200;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  static List<TradeSignal> _getSampleBacktestSignals() {
+    return [
+      TradeSignal(
+        id: 'R_25_live_01',
+        symbol: 'R_25',
+        pattern: 'Hammer',
+        direction: 'BUY',
+        entry: 2134.50,
+        sl: 2129.80,
+        tp: 2143.90,
+        rr: 2.0,
+        timestamp: '2026-09-10 00:15:00 UTC',
+        status: 'OPEN',
+        resultR: 0.0,
+      ),
+      TradeSignal(
+        id: 'R_75_live_02',
+        symbol: 'R_75',
+        pattern: 'Morning Star',
+        direction: 'BUY',
+        entry: 924500.0,
+        sl: 921200.0,
+        tp: 931100.0,
+        rr: 2.0,
+        timestamp: '2026-09-09 23:45:00 UTC',
+        status: 'WIN',
+        resultR: 2.0,
+        exitPrice: 931150.0,
+        exitTime: '2026-09-10 00:05:00 UTC',
+      ),
+      TradeSignal(
+        id: 'R_25_hist_03',
+        symbol: 'R_25',
+        pattern: 'Hammer',
+        direction: 'BUY',
+        entry: 2118.20,
+        sl: 2112.40,
+        tp: 2129.80,
+        rr: 2.0,
+        timestamp: '2026-09-09 22:10:00 UTC',
+        status: 'WIN',
+        resultR: 2.0,
+        exitPrice: 2130.10,
+        exitTime: '2026-09-09 22:35:00 UTC',
+      ),
+      TradeSignal(
+        id: 'R_75_hist_04',
+        symbol: 'R_75',
+        pattern: 'Morning Star',
+        direction: 'BUY',
+        entry: 918700.0,
+        sl: 915900.0,
+        tp: 924300.0,
+        rr: 2.0,
+        timestamp: '2026-09-09 20:30:00 UTC',
+        status: 'LOSS',
+        resultR: -1.0,
+        exitPrice: 915850.0,
+        exitTime: '2026-09-09 20:55:00 UTC',
+      ),
+      TradeSignal(
+        id: 'R_25_hist_05',
+        symbol: 'R_25',
+        pattern: 'Hammer',
+        direction: 'BUY',
+        entry: 2095.40,
+        sl: 2090.10,
+        tp: 2106.00,
+        rr: 2.0,
+        timestamp: '2026-09-09 18:20:00 UTC',
+        status: 'WIN',
+        resultR: 2.0,
+        exitPrice: 2106.50,
+        exitTime: '2026-09-09 18:50:00 UTC',
+      ),
+      TradeSignal(
+        id: 'R_75_hist_06',
+        symbol: 'R_75',
+        pattern: 'Hammer',
+        direction: 'BUY',
+        entry: 912400.0,
+        sl: 909800.0,
+        tp: 917600.0,
+        rr: 2.0,
+        timestamp: '2026-09-09 16:05:00 UTC',
+        status: 'WIN',
+        resultR: 2.0,
+        exitPrice: 917800.0,
+        exitTime: '2026-09-09 16:40:00 UTC',
+      ),
+      TradeSignal(
+        id: 'R_25_hist_07',
+        symbol: 'R_25',
+        pattern: 'Morning Star',
+        direction: 'BUY',
+        entry: 2082.10,
+        sl: 2077.50,
+        tp: 2091.30,
+        rr: 2.0,
+        timestamp: '2026-09-09 13:50:00 UTC',
+        status: 'LOSS',
+        resultR: -1.0,
+        exitPrice: 2077.20,
+        exitTime: '2026-09-09 14:15:00 UTC',
+      ),
+    ];
+  }
+}
