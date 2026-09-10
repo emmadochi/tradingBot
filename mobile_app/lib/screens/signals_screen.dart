@@ -60,6 +60,32 @@ class _SignalsScreenState extends State<SignalsScreen> {
     final benchmarkList = ApiService.getBacktestBenchmarkSignals();
 
     return Scaffold(
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () {
+          final testSig = TradeSignal(
+            id: 'test_${DateTime.now().millisecondsSinceEpoch}',
+            symbol: 'R_25',
+            pattern: 'Hammer',
+            direction: 'BUY',
+            entry: 2745.50,
+            sl: 2738.20,
+            tp: 2760.10,
+            rr: 2.0,
+            timestamp: 'Just Now',
+            status: 'OPEN',
+            resultR: 0.0,
+            isLive: true,
+          );
+          NotificationService.triggerAlert(context, testSig);
+        },
+        backgroundColor: AppTheme.primary,
+        foregroundColor: AppTheme.background,
+        icon: const Icon(Icons.notifications_active_rounded),
+        label: const Text(
+          'Test Alert',
+          style: TextStyle(fontWeight: FontWeight.w800, letterSpacing: 0.5),
+        ),
+      ),
       body: SafeArea(
         child: RefreshIndicator(
           color: AppTheme.primary,
@@ -96,9 +122,9 @@ class _SignalsScreenState extends State<SignalsScreen> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: const [
                                 Text(
-                                  'DERIV EDGE RADAR',
+                                  'DERIV EDGE RADAR • v1.0.3',
                                   style: TextStyle(
-                                    color: AppTheme.textMuted,
+                                    color: AppTheme.primary,
                                     fontSize: 10,
                                     fontWeight: FontWeight.w700,
                                     letterSpacing: 1.2,
