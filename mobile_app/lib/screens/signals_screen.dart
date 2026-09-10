@@ -118,9 +118,47 @@ class _SignalsScreenState extends State<SignalsScreen> {
                             ),
                           ],
                         ),
-                        PulseBadge(
-                          isOnline: _isOnline,
-                          label: _isOnline ? 'CLOUD ACTIVE' : 'RECONNECTING',
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            GestureDetector(
+                              onTap: () {
+                                final testSig = TradeSignal(
+                                  id: 'test_${DateTime.now().millisecondsSinceEpoch}',
+                                  symbol: 'R_25',
+                                  pattern: 'Hammer',
+                                  direction: 'BUY',
+                                  entry: 2745.50,
+                                  sl: 2738.20,
+                                  tp: 2760.10,
+                                  rr: 2.0,
+                                  timestamp: 'Just Now',
+                                  status: 'OPEN',
+                                  resultR: 0.0,
+                                  isLive: true,
+                                );
+                                NotificationService.triggerAlert(context, testSig);
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.all(7),
+                                margin: const EdgeInsets.only(right: 6),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.surfaceLight,
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(color: AppTheme.borderLight, width: 0.8),
+                                ),
+                                child: const Icon(
+                                  Icons.notifications_active_rounded,
+                                  color: AppTheme.primary,
+                                  size: 16,
+                                ),
+                              ),
+                            ),
+                            PulseBadge(
+                              isOnline: _isOnline,
+                              label: _isOnline ? 'CLOUD ACTIVE' : 'RECONNECTING',
+                            ),
+                          ],
                         ),
                       ],
                     ),
