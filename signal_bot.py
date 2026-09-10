@@ -116,6 +116,7 @@ SIGNAL_COOLDOWN_SECONDS = 1800  # min 30 minutes between consecutive signals on 
 ENABLED_PATTERNS = [
     "Morning Star",   # BUY only — proven profitable (56-75% win rate, PF 1.93-2.86)
     "Hammer",         # BUY only — clean bounce off key support
+    "Shooting Star",  # SELL only — clean rejection off key resistance
 ]
 
 # Signal candle body must be at least this fraction of its full high-low range.
@@ -647,8 +648,8 @@ def evaluate_ltf_entry(ctx: SymbolContext):
     if ctx.trend == "RANGE":
         return
 
-    # Filter 3: Strong body confirmation (for multi-candle patterns; Hammers inherently have small bodies)
-    if pattern != "Hammer":
+    # Filter 3: Strong body confirmation (for multi-candle patterns; Hammers/Shooting Stars inherently have small bodies)
+    if pattern not in ("Hammer", "Shooting Star"):
         sig_candle = df.iloc[-1]
         body = abs(sig_candle["close"] - sig_candle["open"])
         rng  = sig_candle["high"] - sig_candle["low"]

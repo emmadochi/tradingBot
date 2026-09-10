@@ -164,8 +164,8 @@ def run_backtest(htf_df: pd.DataFrame, ltf_df: pd.DataFrame) -> list:
         if trend == "RANGE":
             continue
 
-        # Filter 3: Strong body confirmation (for multi-candle patterns; Hammers inherently have small bodies)
-        if pattern != "Hammer":
+        # Filter 3: Strong body confirmation (for multi-candle patterns; Hammers/Shooting Stars inherently have small bodies)
+        if pattern not in ("Hammer", "Shooting Star"):
             sig_candle = ltf_slice.iloc[-1]
             body = abs(sig_candle["close"] - sig_candle["open"])
             rng  = sig_candle["high"] - sig_candle["low"]
