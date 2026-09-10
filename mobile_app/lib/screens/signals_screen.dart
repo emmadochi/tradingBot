@@ -308,6 +308,56 @@ class _SignalsScreenState extends State<SignalsScreen> {
                                 height: 1.4,
                               ),
                             ),
+                            const SizedBox(height: 16),
+                            GestureDetector(
+                              onTap: () {
+                                final testSig = TradeSignal(
+                                  id: 'test_${DateTime.now().millisecondsSinceEpoch}',
+                                  symbol: 'R_25',
+                                  pattern: 'Hammer',
+                                  direction: 'BUY',
+                                  entry: 2745.50,
+                                  sl: 2738.20,
+                                  tp: 2760.10,
+                                  rr: 2.0,
+                                  timestamp: 'Just Now',
+                                  status: 'OPEN',
+                                  resultR: 0.0,
+                                  isLive: true,
+                                );
+                                NotificationService.triggerAlert(context, testSig);
+                              },
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 9),
+                                decoration: BoxDecoration(
+                                  color: AppTheme.primary.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(10),
+                                  border: Border.all(
+                                    color: AppTheme.primary.withValues(alpha: 0.35),
+                                    width: 1,
+                                  ),
+                                ),
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: const [
+                                    Icon(
+                                      Icons.notifications_active_rounded,
+                                      size: 15,
+                                      color: AppTheme.primary,
+                                    ),
+                                    SizedBox(width: 8),
+                                    Text(
+                                      'Test Sound & Vibration Alert',
+                                      style: TextStyle(
+                                        color: AppTheme.primary,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w700,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
                           ],
                         ),
                       ),
